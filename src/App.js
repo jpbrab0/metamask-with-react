@@ -23,16 +23,37 @@ const Text = styled.h1`
   font-family: Ubuntu;
 `
 
-
 function App() {
   const [useWallet, setWallet] = useState("")
+  const [useStatus, setStatus] = useState("")
   const ethereum = window.ethereum
   
   async function connectWallet() {
     const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
     setWallet(accounts[0])
   }
+  async function getCurrentWalletConnected() {
+    const accounts = await ethereum.request({
+      method: 'eth_accounts',
+    });
 
+    if(accounts > 0){
+      setWallet(accounts[0])
+    }
+  }
+  getCurrentWalletConnected()
+
+  ethereum.on("disconnect", (err) => {
+    if(err) {
+      throw new Error("Error in server")
+    }
+    setWallet("")
+    window.location.reload()
+  })
+
+  ethereum.on("accountsChanged", (accounts) => {
+    setWallet(accounts[0])
+  })
   return (
     <Wrapper>
       {ethereum ? 
@@ -51,5 +72,6 @@ function App() {
     </Wrapper>
   );
 }
+
 
 export default App;
