@@ -1,76 +1,67 @@
 import { useState } from "react";
-import styled from "styled-components"
-
-const Wrapper = styled.main`
-  display: grid;
-  place-items: center;
-  height: 100vh;
-`
-const Button = styled.button`
-  background-color: ${ props => 
-    props.color
-  };
-  cursor: pointer;
-  border: 13px;
-  outline: none;
-  color: #fff;
-  padding: 16px;
-  font-size: 1.8rem;
-`
-const Text = styled.h1`
-  color: ${ props => props.color};
-  font-size: 1.6rem;
-  font-family: Ubuntu;
-`
+import { Wrapper, Button, Text} from "./styles"
+import { connectWallet, getCurrentWalletConnected} from "./utils/wallet"
 
 function App() {
   const [useWallet, setWallet] = useState("")
   const [useStatus, setStatus] = useState("")
   const ethereum = window.ethereum
-  
-  async function connectWallet() {
-    const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-    setWallet(accounts[0])
-  }
-  async function getCurrentWalletConnected() {
-    const accounts = await ethereum.request({
-      method: 'eth_accounts',
-    });
 
-    if(accounts > 0){
-      setWallet(accounts[0])
+  // - Function connect a wallet
+  function connect(){
+    const { status, account } = connectWallet()
+    
+    if(status === "connected") {
+      setWallet(account)
+      setStatus(status)
+    } else {
+      setStatus(status)
     }
   }
-  getCurrentWalletConnected()
-
-  ethereum.on("disconnect", (err) => {
-    if(err) {
-      throw new Error("Error in server")
+  // - Function to verify if have any wallet connected
+  async function connected() {
+    const { status, account } = await getCurrentWalletConnected()
+    if(status === "connected") {
+      setWallet(account)
+      setStatus(status)
+    } else {
+      setStatus(status)
     }
-    setWallet("")
-    window.location.reload()
-  })
+  }
 
-  ethereum.on("accountsChanged", (accounts) => {
-    setWallet(accounts[0])
-  })
-  return (
-    <Wrapper>
-      {ethereum ? 
-        <div>
-          {!useWallet && <Button onClick={connectWallet} color="#037DD6">Connect Ethereum Wallet!</Button>}
-          {useWallet && 
-            <div>
-              {/* <Button onClick={disconnectWallet} color="#BB2D3B">Disconnect Wallet</Button> */}
-              <Text color="#000">Your ethereum address: {useWallet}</Text>
-            </div>
-          }
-        </div>
-      :
-        <Text color="#ff000">Ops... You dont have a Ethereum Wallet in your browser :/ </Text>
+  if(ethereum) {
+    // - Listener to get if wallet is disconnected
+    ethereum.on("disconnect", (err) => {
+      if(err) {
+        throw new Error("Error in server")
       }
-    </Wrapper>
-  );
+      setWallet("")
+      setStatus("disconnected")
+      window.location.reload()
+    })
+
+    // - Listener to get if wallet is changed
+    ethereum.on("accountsChanged", (accounts) => {
+      setWallet(accounts[0])
+      setStatus("connected")
+    })
+
+    // - Run function to verify if have a connected wallet
+    connected()
+
+    return(
+        <Wrapper>
+          {useStatus !== "connected" && <Button onClick={connect} color="#037DD6">Connect Ethereum Wallet!</Button>}
+          {useStatus === "connected" && <Text color="#000">Your ethereum address: {useWallet}</Text>}
+        </Wrapper>
+    )
+  } else {
+    return(
+      <Wrapper>
+        <Text color="#ff000">Ops... You dont have a Ethereum Wallet in your browser :/ </Text>
+      </Wrapper>
+    )
+  }
 }
 
 
